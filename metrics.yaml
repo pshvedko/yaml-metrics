@@ -1,0 +1,7 @@
+currencies:
+  - name: usd
+    value: 70.5
+  - name: eur
+    value: 80
+  - name: rur
+    value: 1
