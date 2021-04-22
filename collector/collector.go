@@ -2,8 +2,8 @@ package collector
 
 import (
 	"errors"
+	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
-	"log"
 )
 
 var ErrNilPromoter = errors.New("promoter is nil")
@@ -33,7 +33,6 @@ func (c Collector) Describe(descriptors chan<- *prometheus.Desc) {
 func (c Collector) Collect(metrics chan<- prometheus.Metric) {
 	var a []string
 	for k, v := range c.p.Promote() {
-		log.Printf("%v (%T) %v (%T)\n", k, k, v, v)
 		if m, ok := c.m[k]; ok {
 			switch v := v.(type) {
 			case []interface{}:
@@ -43,8 +42,8 @@ func (c Collector) Collect(metrics chan<- prometheus.Metric) {
 						for _, k := range m.k {
 							if v, ok := v[k]; ok {
 								switch v := v.(type) {
-								case string:
-									a = append(a, v)
+								case bool, string, int, float64, int64:
+									a = append(a, fmt.Sprint(v))
 									continue
 								default:
 									// FIXME
@@ -55,6 +54,8 @@ func (c Collector) Collect(metrics chan<- prometheus.Metric) {
 						if v, ok := v[m.v]; ok {
 							switch v := v.(type) {
 							case int:
+								metrics <- prometheus.MustNewConstMetric(m.d, m.t, float64(v), a...)
+							case int64:
 								metrics <- prometheus.MustNewConstMetric(m.d, m.t, float64(v), a...)
 							case float64:
 								metrics <- prometheus.MustNewConstMetric(m.d, m.t, v, a...)
@@ -67,8 +68,14 @@ func (c Collector) Collect(metrics chan<- prometheus.Metric) {
 					}
 					a = a[:0]
 				}
+			case int:
+				metrics <- prometheus.MustNewConstMetric(m.d, m.t, float64(v))
+			case int64:
+				metrics <- prometheus.MustNewConstMetric(m.d, m.t, float64(v))
+			case float64:
+				metrics <- prometheus.MustNewConstMetric(m.d, m.t, v)
 			default:
-				// TODO
+				// FIXME
 			}
 		}
 	}

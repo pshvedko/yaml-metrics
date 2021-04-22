@@ -1,12 +1,7 @@
-size:
-  height: 1
-  width: 2
-weight: .3
 currencies:
   - name: usd
-    value: 70.1
+    value: 70.5
   - name: eur
     value: 80
   - name: rur
     value: 1
-    multiply: 1
