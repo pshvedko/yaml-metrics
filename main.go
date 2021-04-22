@@ -14,7 +14,10 @@ import (
 
 func main() {
 	r := prometheus.NewRegistry()
-	for t, f := range map[string]func(name string) (*collector.Collector, error){"yaml": collector.NewCollectorYaml} {
+	for t, f := range map[string]func(name string) (*collector.Collector, error){
+		"yaml": collector.NewCollectorYaml,
+		"json": collector.NewCollectorJson,
+	} {
 		c, err := f("metrics." + t)
 		if err != nil {
 			log.Fatal(err)
