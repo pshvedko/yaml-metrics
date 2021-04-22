@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+const jsonFile = "../../metrics.json"
+
 func TestNewPromoter(t *testing.T) {
 	type args struct {
 		name string
@@ -18,7 +20,7 @@ func TestNewPromoter(t *testing.T) {
 		// TODO: Add test cases.
 		{
 			name: "Ok",
-			args: args{name: "../../metrics.json"},
+			args: args{name: jsonFile},
 			want: &Promoter{m: map[string]interface{}{
 				"currencies": []interface{}{
 					map[interface{}]interface{}{"name": "usd", "value": 70.},

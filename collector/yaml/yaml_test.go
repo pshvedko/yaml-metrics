@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+const yamlFile = "../../metrics.yaml"
+
 func TestNewPromoter(t *testing.T) {
 	type args struct {
 		name string
@@ -18,7 +20,7 @@ func TestNewPromoter(t *testing.T) {
 		// TODO: Add test cases.
 		{
 			name: "Ok",
-			args: args{name: "../../metrics.yaml"},
+			args: args{name: yamlFile},
 			want: &Promoter{m: map[string]interface{}{
 				"currencies": []interface{}{
 					map[interface{}]interface{}{"name": "usd", "value": 70.5},
