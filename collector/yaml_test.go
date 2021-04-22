@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-const yamlFile = "../metrics.yaml"
-
 func TestNewCollectorYaml(t *testing.T) {
 	p, err := yaml.NewPromoter(yamlFile)
 	if err != nil {

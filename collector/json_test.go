@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-const jsonFile = "../metrics.json"
-
 func TestNewCollectorJson(t *testing.T) {
 	p, err := json.NewPromoter(jsonFile)
 	if err != nil {

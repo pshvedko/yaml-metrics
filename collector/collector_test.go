@@ -3,61 +3,120 @@ package collector
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/pshvedko/yaml-metrics/collector/json"
+	"github.com/pshvedko/yaml-metrics/collector/yaml"
 	"reflect"
 	"testing"
 )
 
-//func TestCollector_Collect(t *testing.T) {
-//	type fields struct {
-//		m map[string]Metric
-//		p Promoter
-//	}
-//	type args struct {
-//		metrics chan<- prometheus.Metric
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		args   args
-//	}{
-//		// TODO: Add test cases.
-//		{},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			c := Collector{
-//				m: tt.fields.m,
-//				p: tt.fields.p,
-//			}
-//		})
-//	}
-//}
-//
-//func TestCollector_Describe(t *testing.T) {
-//	type fields struct {
-//		m map[string]Metric
-//		p Promoter
-//	}
-//	type args struct {
-//		descriptors chan<- *prometheus.Desc
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		args   args
-//	}{
-//		// TODO: Add test cases.
-//		{},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			c := Collector{
-//				m: tt.fields.m,
-//				p: tt.fields.p,
-//			}
-//		})
-//	}
-//}
+const jsonFile = "../metrics.json"
+const yamlFile = "../metrics.yaml"
+
+func TestCollector_Collect(t *testing.T) {
+	p, err := yaml.NewPromoter(yamlFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	type fields struct {
+		m map[string]Metric
+		p Promoter
+	}
+	type args struct {
+		metrics chan prometheus.Metric
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   int
+	}{
+		// TODO: Add test cases.
+		{
+			name: "Ok",
+			fields: fields{
+				m: map[string]Metric{
+					"currencies": {
+						t: prometheus.GaugeValue,
+						v: "value",
+						k: []string{"name"},
+						d: prometheus.NewDesc("currencies", "", []string{"name"}, prometheus.Labels{"from": "test"})},
+				},
+				p: p,
+			},
+			args: args{metrics: make(chan prometheus.Metric)},
+			want: 3,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := Collector{
+				m: tt.fields.m,
+				p: tt.fields.p,
+			}
+			go func(m chan<- prometheus.Metric) {
+				c.Collect(m)
+				close(m)
+			}(tt.args.metrics)
+			for d := range tt.args.metrics {
+				tt.want--
+				if tt.want < 0 {
+					t.Errorf("Collect() got = %#v, want nothing", d)
+				}
+			}
+		})
+	}
+}
+
+func TestCollector_Describe(t *testing.T) {
+	type fields struct {
+		m map[string]Metric
+		p Promoter
+	}
+	type args struct {
+		descriptors chan *prometheus.Desc
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
+		{
+			name: "Ok",
+			fields: fields{
+				m: map[string]Metric{
+					"currencies": {
+						t: prometheus.GaugeValue,
+						v: "value",
+						k: []string{"name"},
+						d: prometheus.NewDesc("currencies", "", []string{"name"}, prometheus.Labels{"from": "test"})},
+				},
+				p: nil,
+			},
+			args: args{descriptors: make(chan *prometheus.Desc)},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := Collector{
+				m: tt.fields.m,
+				p: tt.fields.p,
+			}
+			go func(d chan<- *prometheus.Desc) {
+				c.Describe(d)
+				close(d)
+			}(tt.args.descriptors)
+			for _, v := range tt.fields.m {
+				d := <-tt.args.descriptors
+				if !reflect.DeepEqual(d, v.d) {
+					t.Errorf("Describe() got = %#v, want %#v", d, v.d)
+				}
+			}
+			for d := range tt.args.descriptors {
+				t.Errorf("Describe() got = %#v, want nothing", d)
+			}
+		})
+	}
+}
 
 func TestCollector_Map(t *testing.T) {
 	type fields struct {
@@ -113,7 +172,7 @@ func TestCollector_Map(t *testing.T) {
 			}
 			c.Map(tt.args.name, tt.args.help, tt.args.valueKey, tt.args.valueType, tt.args.keys, tt.args.labels)
 			if !reflect.DeepEqual(c, tt.want) {
-				t.Errorf("Map() got = %#v, want %#v", c, tt.want)
+				t.Errorf("Map() got = %v, want %v", c, tt.want)
 			}
 		})
 	}
@@ -128,6 +187,7 @@ func TestNewCollector(t *testing.T) {
 		args    args
 		want    *Collector
 		wantErr bool
+		err     error
 	}{
 		// TODO: Add test cases.
 		{
@@ -139,6 +199,13 @@ func TestNewCollector(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name:    "Fail",
+			args:    args{promoter: nil},
+			want:    nil,
+			wantErr: true,
+			err:     ErrNilPromoter,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -146,6 +213,9 @@ func TestNewCollector(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewCollector() error = %v, wantErr %v", err, tt.wantErr)
 				return
+			}
+			if !reflect.DeepEqual(err, tt.err) {
+				t.Errorf("NewCollector() err = %v, want %v", err, tt.err)
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewCollector() got = %v, want %v", got, tt.want)
