@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/pshvedko/yaml-metrics/collector"
@@ -28,8 +30,8 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	h := http.NewServeMux()
-	h.Handle("/metrics", promhttp.HandlerFor(r, promhttp.HandlerOpts{}))
+	h := mux.NewRouter()
+	h.Handle("/metrics", handlers.LoggingHandler(os.Stdout, promhttp.HandlerFor(r, promhttp.HandlerOpts{})))
 	s := http.Server{
 		Addr:    ":8080",
 		Handler: h,
